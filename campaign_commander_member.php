@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Campaign Commander Member class
  *
@@ -105,9 +106,9 @@ class CampaignCommanderMember
 	 * Default constructor
 	 *
 	 * @return	void
-	 * @param	string $login		Login provided for API access
-	 * @param	string $password	The password
-	 * @param	string $key			Manager Key copied from the CCMD web application
+	 * @param	string $login		Login provided for API access.
+	 * @param	string $password	The password.
+	 * @param	string $key			Manager Key copied from the CCMD web application.
 	 */
 	public function __construct($login, $password, $key)
 	{
@@ -150,8 +151,8 @@ class CampaignCommanderMember
 	 * Make the call
 	 *
 	 * @return	mixed
-	 * @param	string $method				The method to be called
-	 * @param	array[optional] $parameters	The parameters
+	 * @param	string $method					The method to be called.
+	 * @param	array[optional] $parameters		The parameters.
 	 */
 	private function doCall($method, $parameters = array())
 	{
@@ -276,7 +277,7 @@ class CampaignCommanderMember
 	 * Convert a long into a string
 	 *
 	 * @return	string
-	 * @param	string $value
+	 * @param	string $value	The value to convert.
 	 */
 	public static function fromLongXML($value)
 	{
@@ -288,11 +289,11 @@ class CampaignCommanderMember
 	 * Convert a x into a long
 	 *
 	 * @return	string
-	 * @param	string $value
+	 * @param	string $value	The value to convert.
 	 */
 	public static function toLongXML($value)
 	{
-		return '<long>'. $value .'</long>';
+		return '<long>' . $value . '</long>';
 	}
 
 
@@ -348,7 +349,7 @@ class CampaignCommanderMember
 	 */
 	public function getUserAgent()
 	{
-		return (string) 'PHP Campaign Commander Member/'. self::VERSION .' '. $this->userAgent;
+		return (string) 'PHP Campaign Commander Member/' . self::VERSION . ' ' . $this->userAgent;
 	}
 
 
@@ -356,7 +357,7 @@ class CampaignCommanderMember
 	 * Set the Key that has to be used
 	 *
 	 * @return	void
-	 * @param	string $key
+	 * @param	string $key		The key to set.
 	 */
 	private function setKey($key)
 	{
@@ -368,7 +369,7 @@ class CampaignCommanderMember
 	 * Set the login that has to be used
 	 *
 	 * @return	void
-	 * @param	string $login
+	 * @param	string $login	The login to use.
 	 */
 	private function setLogin($login)
 	{
@@ -379,7 +380,8 @@ class CampaignCommanderMember
 	/**
 	 * Set the password that has to be used
 	 *
-	 * @param	string $password
+	 * @return	void
+	 * @param	string $password	The password to use.
 	 */
 	private function setPassword($password)
 	{
@@ -392,7 +394,7 @@ class CampaignCommanderMember
 	 * After this time the request will stop. You should handle any errors triggered by this.
 	 *
 	 * @return	void
-	 * @param	int $seconds	The timeout in seconds
+	 * @param	int $seconds	The timeout in seconds.
 	 */
 	public function setTimeOut($seconds)
 	{
@@ -405,7 +407,7 @@ class CampaignCommanderMember
 	 * It will be appended to ours, the result will look like: "PHP Campaign Commander Member/<version> <your-user-agent>"
 	 *
 	 * @return	void
-	 * @param	string $userAgent	Your user-agent, it should look like <app-name>/<app-version>
+	 * @param	string $userAgent	Your user-agent, it should look like <app-name>/<app-version>.
 	 */
 	public function setUserAgent($userAgent)
 	{
@@ -417,7 +419,7 @@ class CampaignCommanderMember
 	/**
 	 * Close the connection
 	 *
-	 * @return	bool	true if the connection was closes, otherwise false
+	 * @return	bool	true if the connection was closes, otherwise false.
 	 */
 	public function closeApiConnection()
 	{
@@ -443,7 +445,7 @@ class CampaignCommanderMember
 	/**
 	 * Describe the table. As in: identifing all available columns in the member table
 	 *
-	 * @return	array	An array containing all the fields in your member-table
+	 * @return	array	An array containing all the fields in your member-table.
 	 */
 	public function describeTable()
 	{
@@ -467,8 +469,8 @@ class CampaignCommanderMember
 	/**
 	 * Get a member by email-address
 	 *
-	 * @return	array			An array with all fields as a key-value-pair for the member
-	 * @param	string $email	The email of the member to retrieve
+	 * @return	array			An array with all fields as a key-value-pair for the member.
+	 * @param	string $email	The email of the member to retrieve.
 	 */
 	public function getByEmail($email)
 	{
@@ -523,8 +525,8 @@ class CampaignCommanderMember
 	/**
 	 * Get a member by id
 	 *
-	 * @return	array		An array with all fields as a key-value-pair for the member
-	 * @param	string $id	The ID of the member to retriever
+	 * @return	array		An array with all fields as a key-value-pair for the member.
+	 * @param	string $id	The ID of the member to retrieve.
 	 */
 	public function getById($id)
 	{
@@ -582,8 +584,8 @@ class CampaignCommanderMember
 	 *  - Error: Something went wrong, there is no way to see what went wrong.
 	 *  - Job_Done_Or_Does_Not_Exist: the job is done or doesn't exists (anymore).
 	 *
-	 * @return	string		The status of the jobs
-	 * @param	int $jobID	The id of the job
+	 * @return	string		The status of the jobs.
+	 * @param	int $jobID	The id of the job.
 	 */
 	public function getJobStatus($jobID)
 	{
@@ -609,8 +611,8 @@ class CampaignCommanderMember
 	/**
 	 * Insert a new member, all member-fields will be empty
 	 *
-	 * @return	int				The JobID, see getJobStatus
-	 * @param	string $email	The email for the member to join
+	 * @return	int				The JobID, see getJobStatus.
+	 * @param	string $email	The email for the member to join.
 	 */
 	public function insert($email)
 	{
@@ -631,10 +633,10 @@ class CampaignCommanderMember
 	/**
 	 * Insert a new member by building a member-object
 	 *
-	 * @return	int						The JobID, see getJobStatus
-	 * @param	array $fields			The fields, as a key-value-pair, that will be set
-	 * @param	string[optional] $email The email for the new member
-	 * @param	string[optional] $id	The for the new member
+	 * @return	int						The JobID, see getJobStatus.
+	 * @param	array $fields			The fields, as a key-value-pair, that will be set.
+	 * @param	string[optional] $email	The email for the new member.
+	 * @param	string[optional] $id	The for the new member.
 	 */
 	public function insertByObject($fields, $email = null, $id = null)
 	{
@@ -668,9 +670,9 @@ class CampaignCommanderMember
 	/**
 	 * Insert a new member of updates an existing member
 	 *
-	 * @return	int						The JobID, see getJobStatus
-	 * @param	array $fields			The fields, as a key-value-pair, that will be set
-	 * @param	string[optional] $email	The email for the (new) member
+	 * @return	int						The JobID, see getJobStatus.
+	 * @param	array $fields			The fields, as a key-value-pair, that will be set.
+	 * @param	string[optional] $email	The email for the (new) member.
 	 */
 	public function insertOrUpdateByObject($fields, $email = null)
 	{
@@ -703,10 +705,10 @@ class CampaignCommanderMember
 	/**
 	 * Updates a given field for a certain user
 	 *
-	 * @return	int				The JobID, see getJobStatus
-	 * @param	string $email	The email of the member to update
-	 * @param	string $field	The field that will be set
-	 * @param	mixed $value	The value that will be set
+	 * @return	int				The JobID, see getJobStatus.
+	 * @param	string $email	The email of the member to update.
+	 * @param	string $field	The field that will be set.
+	 * @param	mixed $value	The value that will be set.
 	 */
 	public function update($email, $field, $value)
 	{
@@ -729,10 +731,10 @@ class CampaignCommanderMember
 	/**
 	 * Update a member by building a member-object
 	 *
-	 * @return	int						The JobID, see getJobStatus
-	 * @param	array $fields			The fields, as a key-value-pair, that will be set
-	 * @param	string[optional] $email	The email of the member to update
-	 * @param	int[optiona] $id		The id of the member to update
+	 * @return	int						The JobID, see getJobStatus.
+	 * @param	array $fields			The fields, as a key-value-pair, that will be set.
+	 * @param	string[optional] $email	The email of the member to update.
+	 * @param	int[optional] $id		The id of the member to update.
 	 */
 	public function updateByObject($fields, $email = null, $id = null)
 	{
@@ -766,8 +768,8 @@ class CampaignCommanderMember
 	/**
 	 * Unjoins a member by email
 	 *
-	 * @return	int				The JobID, see getJobStatus
-	 * @param	string $email	The email of the member to unjoin
+	 * @return	int				The JobID, see getJobStatus.
+	 * @param	string $email	The email of the member to unjoin.
 	 */
 	public function unjoinByEmail($email)
 	{
@@ -788,8 +790,8 @@ class CampaignCommanderMember
 	/**
 	 * Unjoins a member by id
 	 *
-	 * @return	int		The JobID, see getJobStatus
-	 * @param	int $id	The member ID to unjoin
+	 * @return	int		The JobID, see getJobStatus.
+	 * @param	int $id	The member ID to unjoin.
 	 */
 	public function unjoinById($id)
 	{
@@ -810,8 +812,8 @@ class CampaignCommanderMember
 	/**
 	 * Unjoins a member by object
 	 *
-	 * @return	int				The JobID, see getJobStatus
-	 * @param	array $fields	All members that meet the fields will be unjoined
+	 * @return	int				The JobID, see getJobStatus.
+	 * @param	array $fields	All members that meet the fields will be unjoined.
 	 */
 	public function unjoinByObject($fields)
 	{
