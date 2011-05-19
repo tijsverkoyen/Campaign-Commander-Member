@@ -4,7 +4,7 @@
 
 ## About
 
-PHP Campaign Commander Member is a (wrapper)class to communicate with the [Campaign Commander Member](http://campaigncommander.com) API.
+PHP Campaign Commander Member is a (wrapper)class to communicate with the [Campaign Commander Member](http://campaigncommander.com) MEMBER API.
 
 ## License
 
@@ -23,3 +23,4 @@ More documentation can be found on [http://classes.verkoyen.eu/campaigncommander
 * [Capitole Gent](http://www.capitolegent.be)
 * [Music Hall](http://www.musichall.be)
 * [My Culture](http://www.myculture.be)
+* [Zuiderkroon](http://www.zuiderkroon.be)
