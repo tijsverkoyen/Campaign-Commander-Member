@@ -485,6 +485,9 @@ class CampaignCommanderMember
 			throw $e;
 		}
 
+		// sometimes this will return a hash, so grab the first one
+		if(is_array($response)) $response = $response[0];
+
 		// nothing found
 		if($response == null) return false;
 
@@ -591,6 +594,7 @@ class CampaignCommanderMember
 
 		// validate respone
 		if(!isset($response->status)) throw new CampaignCommanderMemberException('Invalid response');
+
 		if(!in_array($response->status, $possibleResponses)) throw new CampaignCommanderMemberException('Invalid response');
 
 		// return status
@@ -626,8 +630,9 @@ class CampaignCommanderMember
 	 * @return	int						The JobID, see getJobStatus
 	 * @param	array $fields			The fields, as a key-value-pair, that will be set
 	 * @param	string[optional] $email The email for the new member
+	 * @param	string[optional] $id	The for the new member
 	 */
-	public function insertByObject($fields, $email = null)
+	public function insertByObject($fields, $email = null, $id = null)
 	{
 		// validate
 		if($email === null && $id == null) throw new CampaignCommanderMemberException('Email or id has to be specified');
@@ -643,9 +648,10 @@ class CampaignCommanderMember
 
 		// add email
 		if($email !== null) $parameters['member']['email'] = (string) $email;
+		if($id !== null) $parameters['member']['memberUID'] = (string) $id;
 
 		// make the call
-		$response = (int) $this->doCall('insertMemberByObj', $parameters);
+		$response = $this->doCall('insertMemberByObj', $parameters);
 
 		// validate
 		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
@@ -680,7 +686,7 @@ class CampaignCommanderMember
 		if($email !== null) $parameters['member']['email'] = (string) $email;
 
 		// make the call
-		$response = (int) $this->doCall('insertOrUpdateMemberByObj', $parameters);
+		$response = $this->doCall('insertOrUpdateMemberByObj', $parameters);
 
 		// validate
 		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
@@ -706,7 +712,7 @@ class CampaignCommanderMember
 		$parameters['value'] = $value;
 
 		// make the call
-		$response = (int) $this->doCall('updateMember', $parameters);
+		$response = $this->doCall('updateMember', $parameters);
 
 		// validate
 		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
@@ -743,7 +749,7 @@ class CampaignCommanderMember
 		if($id !== null) $parameters['member']['memberUID'] = (string) $id;
 
 		// make the call
-		$response = (int) $this->doCall('updateMemberByObj', $parameters);
+		$response = $this->doCall('updateMemberByObj', $parameters);
 
 		// validate
 		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
@@ -765,7 +771,7 @@ class CampaignCommanderMember
 		$parameters['email'] = (string) $email;
 
 		// make the call
-		$response = (int) $this->doCall('unjoinMemberByEmail', $parameters);
+		$response = $this->doCall('unjoinMemberByEmail', $parameters);
 
 		// validate
 		if($response == 0) return false;
@@ -787,7 +793,7 @@ class CampaignCommanderMember
 		$parameters['memberId'] = (string) $id;
 
 		// make the call
-		$response = (int) $this->doCall('unjoinMemberById', $parameters);
+		$response = $this->doCall('unjoinMemberById', $parameters);
 
 		// validate
 		if($response == 0) return false;
@@ -815,7 +821,7 @@ class CampaignCommanderMember
 		}
 
 		// make the call
-		$response = (int) $this->doCall('unjoinMemberByObj', $parameters);
+		$response = $this->doCall('unjoinMemberByObj', $parameters);
 
 		// validate
 		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
