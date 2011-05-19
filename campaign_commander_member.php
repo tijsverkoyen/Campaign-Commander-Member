@@ -159,7 +159,11 @@ class CampaignCommanderMember
 							 'trace' => self::DEBUG,
 							 'exceptions' => false,
 							 'connection_timeout' => $this->getTimeOut(),
-							 'user_agent' => $this->getUserAgent());
+							 'user_agent' => $this->getUserAgent(),
+							 'typemap' => array(
+												array('type_ns' => 'http://www.w3.org/2001/XMLSchema', 'type_name' => 'long', 'to_xml' => array(__CLASS__, 'toLongXML'), 'from_xml' => array(__CLASS__, 'fromLongXML'))	// map long to string, because a long can cause an integer overflow
+											)
+							);
 
 			// create client
 			$this->soapClient = new SoapClient(self::WSDL_URL, $options);
@@ -248,6 +252,30 @@ class CampaignCommanderMember
 
 		// return the response
 		return $response->return;
+	}
+
+
+	/**
+	 * Convert a long into a string
+	 *
+	 * @return	string
+	 * @param	string $value
+	 */
+	public static function fromLongXML($value)
+	{
+		return (string) strip_tags($value);
+	}
+
+
+	/**
+	 * Convert a x into a long
+	 *
+	 * @return	string
+	 * @param	string $value
+	 */
+	public static function toLongXML($value)
+	{
+		return '<long>'. $value .'</long>';
 	}
 
 
