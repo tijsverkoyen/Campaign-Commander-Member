@@ -243,8 +243,21 @@ class CampaignCommanderMember
 				echo '</pre>';
 			}
 
-			// throw exception
-			throw new CampaignCommanderMemberException($message);
+			// invalid token?
+			if($message == 'Please enter a valid token to validate your connection.')
+			{
+				// reset token
+				$this->token = null;
+
+				// try again
+				return self::doCall($method, $parameters);
+			}
+
+			else
+			{
+				// throw exception
+				throw new CampaignCommanderMemberException($message);
+			}
 		}
 
 		// empty reply
