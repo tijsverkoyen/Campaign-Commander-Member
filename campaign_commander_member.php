@@ -25,7 +25,7 @@
  * @author			Tijs Verkoyen <php-campaign-commander-member@verkoyen.eu>
  * @version			1.0.1
  *
- * @copyright		Copyright (c) 2009, Tijs Verkoyen. All rights reserved.
+ * @copyright		Copyright (c), Tijs Verkoyen. All rights reserved.
  * @license			BSD License
  */
 class CampaignCommanderMember
@@ -155,7 +155,7 @@ class CampaignCommanderMember
 		if($this->soapClient === null || $this->token === null)
 		{
 			// build options
-			$options = array('soap_version'   => SOAP_1_1,
+			$options = array('soap_version' => SOAP_1_1,
 							 'trace' => self::DEBUG,
 							 'exceptions' => false,
 							 'connection_timeout' => $this->getTimeOut(),
