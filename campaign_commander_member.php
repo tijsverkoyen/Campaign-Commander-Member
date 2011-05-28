@@ -8,6 +8,10 @@
  * The class is documented in the file itself. If you find any bugs help me out and report them. Reporting can be done by sending an email to php-campaign-commander-member-bugs[at]verkoyen[dot]eu.
  * If you report a bug, make sure you give me enough information (include your code).
  *
+ * Changelog since 1.0.2
+ * - Added method to set the server.
+ * - Renamed methods to reflect to current API
+ *
  * Changelog since 1.0.1
  * - Typemapping for really long longs.
  * - No more casting to integers (because of the really long longs).
@@ -28,7 +32,7 @@
  * This software is provided by the author "as is" and any express or implied warranties, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose are disclaimed. In no event shall the author be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited to, procurement of substitute goods or services; loss of use, data, or profits; or business interruption) however caused and on any theory of liability, whether in contract, strict liability, or tort (including negligence or otherwise) arising in any way out of the use of this software, even if advised of the possibility of such damage.
  *
  * @author			Tijs Verkoyen <php-campaign-commander-member@verkoyen.eu>
- * @version			1.0.2
+ * @version			1.1.0
  *
  * @copyright		Copyright (c), Tijs Verkoyen. All rights reserved.
  * @license			BSD License
@@ -39,10 +43,10 @@ class CampaignCommanderMember
 	const DEBUG = false;
 
 	// url for the api
-	const WSDL_URL = 'http://emvapi.emv3.com/apimember/services/MemberService?wsdl';
+	const WSDL_URL = 'apimember/services/MemberService?wsdl';
 
 	// current version
-	const VERSION = '1.0.2';
+	const VERSION = '1.1.0';
 
 
 	/**
@@ -67,6 +71,14 @@ class CampaignCommanderMember
 	 * @var	string
 	 */
 	private $password;
+
+
+	/**
+	 * The server to use
+	 *
+	 * @var	string
+	 */
+	private $server = 'http://emvapi.emv3.com';
 
 
 	/**
@@ -106,15 +118,17 @@ class CampaignCommanderMember
 	 * Default constructor
 	 *
 	 * @return	void
-	 * @param	string $login		Login provided for API access.
-	 * @param	string $password	The password.
-	 * @param	string $key			Manager Key copied from the CCMD web application.
+	 * @param	string $login				Login provided for API access.
+	 * @param	string $password			The password.
+	 * @param	string $key					Manager Key copied from the CCMD web application.
+	 * @param	string[optional] $server	The server to use. Ask your account-manager.
 	 */
-	public function __construct($login, $password, $key)
+	public function __construct($login, $password, $key, $server = null)
 	{
 		$this->setLogin($login);
 		$this->setPassword($password);
 		$this->setKey($key);
+		if($server !== null) $this->setServer($server);
 	}
 
 
@@ -154,7 +168,7 @@ class CampaignCommanderMember
 	 * @param	string $method					The method to be called.
 	 * @param	array[optional] $parameters		The parameters.
 	 */
-	private function doCall($method, $parameters = array())
+	private function doCall($method, array $parameters = array())
 	{
 		// open connection if needed
 		if($this->soapClient === null || $this->token === null)
@@ -162,16 +176,16 @@ class CampaignCommanderMember
 			// build options
 			$options = array('soap_version' => SOAP_1_1,
 							 'trace' => self::DEBUG,
-							 'exceptions' => false,
+							 'exceptions' => true,
 							 'connection_timeout' => $this->getTimeOut(),
 							 'user_agent' => $this->getUserAgent(),
 							 'typemap' => array(
 												array('type_ns' => 'http://www.w3.org/2001/XMLSchema', 'type_name' => 'long', 'to_xml' => array(__CLASS__, 'toLongXML'), 'from_xml' => array(__CLASS__, 'fromLongXML'))	// map long to string, because a long can cause an integer overflow
 											)
-							);
+						);
 
 			// create client
-			$this->soapClient = new SoapClient(self::WSDL_URL, $options);
+			$this->soapClient = new SoapClient($this->getServer() . '/' . self::WSDL_URL, $options);
 
 			// build login parameters
 			$loginParameters['login'] = $this->getLogin();
@@ -189,6 +203,16 @@ class CampaignCommanderMember
 
 				// more detailed message available
 				if(isset($response->detail->ConnectionServiceException->description)) $message = (string) $response->detail->ConnectionServiceException->description;
+
+				// invalid token?
+				if($message == 'Please enter a valid token to validate your connection.')
+				{
+					// reset token
+					$this->token = null;
+
+					// try again
+					return self::doCall($method, $parameters);
+				}
 
 				// internal debugging enabled
 				if(self::DEBUG)
@@ -226,8 +250,28 @@ class CampaignCommanderMember
 		// add token
 		$parameters['token'] = $this->token;
 
-		// make the call
-		$response = $this->soapClient->__soapCall($method, array($parameters));
+		try
+		{
+			// make the call
+			$response = $this->soapClient->__soapCall($method, array($parameters));
+		}
+
+		catch(Exception $e)
+		{
+			// internal debugging enabled
+			if(self::DEBUG)
+			{
+				echo '<pre>';
+				echo 'last request<br />';
+				var_dump($this->soapClient->__getLastRequest());
+				echo 'response<br />';
+				var_dump($response);
+				echo '</pre>';
+			}
+
+			// throw exception
+			throw new CampaignCommanderMemberException($e->getMessage());
+		}
 
 		// validate response
 		if(is_soap_fault($response))
@@ -238,6 +282,12 @@ class CampaignCommanderMember
 			// more detailed message available
 			if(isset($response->detail->ConnectionServiceException->description)) $message = (string) $response->detail->ConnectionServiceException->description;
 			if(isset($response->detail->MemberServiceException->description)) $message = (string) $response->detail->MemberServiceException->description;
+			if(isset($response->detail->CcmdServiceException->description))
+			{
+				$message = (string) $response->detail->CcmdServiceException->description;
+				if(isset($response->detail->CcmdServiceException->fields)) $message .= ' fields: ' . $response->detail->CcmdServiceException->fields;
+				if(isset($response->detail->CcmdServiceException->status)) $message .= ' status: ' . $response->detail->CcmdServiceException->status;
+			}
 
 			// internal debugging enabled
 			if(self::DEBUG)
@@ -248,21 +298,8 @@ class CampaignCommanderMember
 				echo '</pre>';
 			}
 
-			// invalid token?
-			if($message == 'Please enter a valid token to validate your connection.')
-			{
-				// reset token
-				$this->token = null;
-
-				// try again
-				return self::doCall($method, $parameters);
-			}
-
-			else
-			{
-				// throw exception
-				throw new CampaignCommanderMemberException($message);
-			}
+			// throw exception
+			throw new CampaignCommanderMemberException($message);
 		}
 
 		// empty reply
@@ -331,6 +368,17 @@ class CampaignCommanderMember
 
 
 	/**
+	 * Get the server
+	 *
+	 * @return	string
+	 */
+	private function getServer()
+	{
+		return $this->server;
+	}
+
+
+	/**
 	 * Get the timeout that will be used
 	 *
 	 * @return	int
@@ -390,6 +438,18 @@ class CampaignCommanderMember
 
 
 	/**
+	 * Set the server that has to be used.
+	 *
+	 * @return	void
+	 * @param	string $server	The server to use.
+	 */
+	private function setServer($server)
+	{
+		$this->server = (string) $server;
+	}
+
+
+	/**
 	 * Set the timeout
 	 * After this time the request will stop. You should handle any errors triggered by this.
 	 *
@@ -443,11 +503,11 @@ class CampaignCommanderMember
 
 // member methods
 	/**
-	 * Describe the table. As in: identifing all available columns in the member table
+	 * Retrieves the list of fields (i.e. database column names) available in the Member table.
 	 *
-	 * @return	array	An array containing all the fields in your member-table.
+	 * @return	array	An array containing all database column names.
 	 */
-	public function describeTable()
+	public function descMemberTable()
 	{
 		// make the call
 		$response = $this->doCall('descMemberTable');
@@ -470,38 +530,25 @@ class CampaignCommanderMember
 	 * Get a member by email-address
 	 *
 	 * @return	array			An array with all fields as a key-value-pair for the member.
-	 * @param	string $email	The email of the member to retrieve.
+	 * @param	string $email	The email address of the member to retrieve.
 	 */
-	public function getByEmail($email)
+	public function getMemberByEmail($email)
 	{
 		// build parameters
+		$parameters = array();
 		$parameters['email'] = (string) $email;
 
-		try
-		{
-			// make the call
-			$response = $this->doCall('getMemberByEmail', $parameters);
-		}
-		catch(Exception $e)
-		{
-			// couldn't retrieve the member (no member with that ID)
-			if($e->getMessage() == 'Error while retrieving the Member') return false;
-
-			// throw exception one up
-			throw $e;
-		}
+		// make the call
+		$response = $this->doCall('getMemberByEmail', $parameters);
 
 		// sometimes this will return a hash, so grab the first one
 		if(is_array($response)) $response = $response[0];
 
-		// nothing found
-		if($response == null) return false;
-
 		// validate response
 		if(!isset($response->attributes->entry)) throw new CampaignCommanderMemberException('Invalid response');
 
 		// init var
-		$attributes = array();
+		$return = array();
 
 		// loop fields
 		foreach($response->attributes->entry as $row)
@@ -514,47 +561,34 @@ class CampaignCommanderMember
 			if($key == 'DATEJOIN' && $value !== null) $value = (int) strtotime($value);
 
 			// add
-			$attributes[$key] = $value;
+			$return[$key] = $value;
 		}
 
 		// return
-		return $attributes;
+		return $return;
 	}
 
 
 	/**
-	 * Get a member by id
+	 * Uses the member ID to retrieve the details of a member.
 	 *
 	 * @return	array		An array with all fields as a key-value-pair for the member.
-	 * @param	string $id	The ID of the member to retrieve.
+	 * @param	string $id	The ID of the member whose details you want to retrieve..
 	 */
-	public function getById($id)
+	public function getMemberById($id)
 	{
 		// build parameters
+		$parameters = array();
 		$parameters['id'] = (string) $id;
 
-		try
-		{
-			// make the call
-			$response = $this->doCall('getMemberById', $parameters);
-		}
-		catch(Exception $e)
-		{
-			// couldn't retrieve the member (no member with that ID)
-			if($e->getMessage() == 'Error while retrieving the Member') return false;
-
-			// throw exception one up
-			throw $e;
-		}
-
-		// nothing found
-		if($response == null) return false;
+		// make the call
+		$response = $this->doCall('getMemberById', $parameters);
 
 		// validate response
 		if(!isset($response->attributes->entry)) throw new CampaignCommanderMemberException('Invalid response');
 
 		// init var
-		$attributes = array();
+		$return = array();
 
 		// loop fields
 		foreach($response->attributes->entry as $row)
@@ -567,56 +601,136 @@ class CampaignCommanderMember
 			if($key == 'DATEJOIN' && $value !== null) $value = (int) strtotime($value);
 
 			// add
-			$attributes[$key] = $value;
+			$return[$key] = $value;
 		}
 
 		// return
-		return $attributes;
+		return $return;
 	}
 
 
 	/**
-	 * Get job status for a given jobID
-	 * Possible return-values are:
-	 *  - Insert: The jobs is busy (I think)
-	 *  - Processing: The job is busy
-	 *  - Processed: The job was processed and is done
-	 *  - Error: Something went wrong, there is no way to see what went wrong.
-	 *  - Job_Done_Or_Does_Not_Exist: the job is done or doesn't exists (anymore).
+	 * Retrieves a list of a maximum of 50 members who match the given criteria.
 	 *
-	 * @return	string		The status of the jobs.
-	 * @param	int $jobID	The id of the job.
+	 * @return	array			An array containing the list of members who match the criteria.
+	 * @param	array $member	The member object containing the criteria.
 	 */
-	public function getJobStatus($jobID)
+	public function getListMembersByObj(array $member)
 	{
-		// possible responses
-		$possibleResponses = array('Insert', 'Processing', 'Processed', 'Error', 'Job_Done_Or_Does_Not_Exist');
-
 		// build parameters
-		$parameters['synchroId'] = (string) $jobID;
+		$parameters = array();
+		$parameters['member'] = $member;
 
 		// make the call
-		$response = $this->doCall('getMemberJobStatus', $parameters);
+		$response = $this->doCall('getListMembersByObj', $parameters);
 
-		// validate respone
-		if(!isset($response->status)) throw new CampaignCommanderMemberException('Invalid response');
+		// no results
+		if($response === null) return array();
 
-		if(!in_array($response->status, $possibleResponses)) throw new CampaignCommanderMemberException('Invalid response');
+		// validate response
+		if(!is_array($response)) throw new CampaignCommanderMemberException('Invalid response');
 
-		// return status
-		return (string) $response->status;
+		// init var
+		$return = array();
+
+		// loop fields
+		foreach($response as $row)
+		{
+			// validate
+			if(!isset($row->attributes->entry)) continue;
+
+			// init var
+			$member = array();
+
+			// loop fields
+			foreach($row->attributes->entry as $item)
+			{
+				// create vars
+				$key = (string) $item->key;
+				$value = (isset($item->value)) ? $item->value : null;
+
+				// convert some stuff
+				if($key == 'DATEJOIN' && $value !== null) $value = (int) strtotime($value);
+
+				// add
+				$member[$key] = $value;
+			}
+
+			// add
+			$return[] = $member;
+		}
+
+		// return
+		return $return;
+	}
+
+
+	/**
+	 * Retrieves all members page by page. Each page contains 10 members.
+	 *
+	 * @return	array		An array containing the list of members.
+	 * @param	int $page	The page number to retrieve.
+	 */
+	public function getListMembersByPage($page)
+	{
+		// build parameters
+		$parameters = array();
+		$parameters['page'] = (int) $page;
+
+		// make the call
+		$response = $this->doCall('getListMembersByPage', $parameters);
+
+		// no results
+		if($response === null) return array();
+
+		// validate response
+		if(!isset($response->list)) throw new CampaignCommanderMemberException('Invalid response');
+
+		// init var
+		$return = array();
+
+		// loop fields
+		foreach($response->list as $row)
+		{
+			// validate
+			if(!isset($row->attributes->entry)) continue;
+
+			// init var
+			$member = array();
+
+			// loop fields
+			foreach($row->attributes->entry as $item)
+			{
+				// create vars
+				$key = (string) $item->key;
+				$value = (isset($item->value)) ? $item->value : null;
+
+				// convert some stuff
+				if($key == 'DATEJOIN' && $value !== null) $value = (int) strtotime($value);
+
+				// add
+				$member[$key] = $value;
+			}
+
+			// add
+			$return[] = $member;
+		}
+
+		// return
+		return $return;
 	}
 
 
 	/**
 	 * Insert a new member, all member-fields will be empty
 	 *
-	 * @return	int				The JobID, see getJobStatus.
-	 * @param	string $email	The email for the member to join.
+	 * @return	string			The job ID of the insertion, see getJobStatus().
+	 * @param	string $email	The email addres of the new member.
 	 */
-	public function insert($email)
+	public function insertMember($email)
 	{
 		// build parameters
+		$parameters = array();
 		$parameters['email'] = (string) $email;
 
 		// make the call
@@ -626,93 +740,22 @@ class CampaignCommanderMember
 		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
 
 		// return the job ID
-		return $response;
-	}
-
-
-	/**
-	 * Insert a new member by building a member-object
-	 *
-	 * @return	int						The JobID, see getJobStatus.
-	 * @param	array $fields			The fields, as a key-value-pair, that will be set.
-	 * @param	string[optional] $email	The email for the new member.
-	 * @param	string[optional] $id	The for the new member.
-	 */
-	public function insertByObject($fields, $email = null, $id = null)
-	{
-		// validate
-		if($email === null && $id == null) throw new CampaignCommanderMemberException('Email or id has to be specified');
-
-		// build member-object
-		$parameters['member'] = array();
-
-		// add fields
-		foreach($fields as $key => $value)
-		{
-			$parameters['member']['dynContent']['entry'][] = array('key' => $key, 'value' => $value);
-		}
-
-		// add email
-		if($email !== null) $parameters['member']['email'] = (string) $email;
-		if($id !== null) $parameters['member']['memberUID'] = (string) $id;
-
-		// make the call
-		$response = $this->doCall('insertMemberByObj', $parameters);
-
-		// validate
-		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
-
-		// return the job ID
-		return $response;
-	}
-
-
-	/**
-	 * Insert a new member of updates an existing member
-	 *
-	 * @return	int						The JobID, see getJobStatus.
-	 * @param	array $fields			The fields, as a key-value-pair, that will be set.
-	 * @param	string[optional] $email	The email for the (new) member.
-	 */
-	public function insertOrUpdateByObject($fields, $email = null)
-	{
-		// validate
-		if($email === null && $id == null) throw new CampaignCommanderMemberException('Email or id has to be specified');
-
-		// build member-object
-		$parameters['member'] = array();
-
-		// add fields
-		foreach($fields as $key => $value)
-		{
-			$parameters['member']['dynContent']['entry'][] = array('key' => $key, 'value' => $value);
-		}
-
-		// add email
-		if($email !== null) $parameters['member']['email'] = (string) $email;
-
-		// make the call
-		$response = $this->doCall('insertOrUpdateMemberByObj', $parameters);
-
-		// validate
-		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
-
-		// return the job ID
-		return $response;
+		return (string) $response;
 	}
 
 
 	/**
 	 * Updates a given field for a certain user
 	 *
-	 * @return	int				The JobID, see getJobStatus.
-	 * @param	string $email	The email of the member to update.
-	 * @param	string $field	The field that will be set.
-	 * @param	mixed $value	The value that will be set.
+	 * @return	string			The job ID of the update, see getJobStatus().
+	 * @param	string $email	The email address of the member.
+	 * @param	string $field	The field to update.
+	 * @param	mixed $value	The value with which to update the field.
 	 */
-	public function update($email, $field, $value)
+	public function updateMember($email, $field, $value)
 	{
 		// build parameters
+		$parameters = array();
 		$parameters['email'] = (string) $email;
 		$parameters['field'] = (string) $field;
 		$parameters['value'] = $value;
@@ -724,24 +767,25 @@ class CampaignCommanderMember
 		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
 
 		// return the job ID
-		return $response;
+		return (string) $response;
 	}
 
 
 	/**
-	 * Update a member by building a member-object
+	 * Insert a new member of updates an existing member
 	 *
-	 * @return	int						The JobID, see getJobStatus.
-	 * @param	array $fields			The fields, as a key-value-pair, that will be set.
-	 * @param	string[optional] $email	The email of the member to update.
-	 * @param	int[optional] $id		The id of the member to update.
+	 * @return	string						The job ID of the update/insertion, see getJobStatus().
+	 * @param	array $fields				The fields, as a key-value-pair, that will be updates/inserted.
+	 * @param	string[optional] $email		The email of the member to update/insert.
+	 * @param	string[optional] $id		The id of the member to update/insert.
 	 */
-	public function updateByObject($fields, $email = null, $id = null)
+	public function insertOrUpdateMemberByObj($fields, $email = null, $id = null)
 	{
 		// validate
 		if($email === null && $id == null) throw new CampaignCommanderMemberException('Email or id has to be specified');
 
-		// build member-object
+		// build parameters
+		$parameters = array();
 		$parameters['member'] = array();
 
 		// add fields
@@ -750,7 +794,45 @@ class CampaignCommanderMember
 			$parameters['member']['dynContent']['entry'][] = array('key' => $key, 'value' => $value);
 		}
 
-		// add email
+		// memberUID
+		if($email !== null) $parameters['member']['email'] = (string) $email;
+		if($id !== null) $parameters['member']['memberUID'] = (string) $id;
+
+		// make the call
+		$response = $this->doCall('insertOrUpdateMemberByObj', $parameters);
+
+		// validate
+		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
+
+		// return the job ID
+		return (string) $response;
+	}
+
+
+	/**
+	 * Update a member by building a member-object
+	 *
+	 * @return	string						The job ID of the update, see getJobStatus().
+	 * @param	array $fields				The fields, as a key-value-pair, that will be set.
+	 * @param	string[optional] $email		The email of the member to update.
+	 * @param	string[optional] $id		The id of the member to update.
+	 */
+	public function updateMemberByObj($fields, $email = null, $id = null)
+	{
+		// validate
+		if($email === null && $id == null) throw new CampaignCommanderMemberException('Email or id has to be specified');
+
+		// build parameters
+		$parameters = array();
+		$parameters['member'] = array();
+
+		// add fields
+		foreach($fields as $key => $value)
+		{
+			$parameters['member']['dynContent']['entry'][] = array('key' => $key, 'value' => $value);
+		}
+
+		// memberUID
 		if($email !== null) $parameters['member']['email'] = (string) $email;
 		if($id !== null) $parameters['member']['memberUID'] = (string) $id;
 
@@ -761,70 +843,100 @@ class CampaignCommanderMember
 		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
 
 		// return the job ID
-		return $response;
+		return (string) $response;
 	}
 
 
 	/**
-	 * Unjoins a member by email
+	 * Retrieves the job status (i.e. the status of the member insertion or update) using the job ID.
+	 * Possible return-values are:
+	 *  - Insert: The jobs is busy (I think)
+	 *  - Processing: The job is busy
+	 *  - Processed: The job was processed and is done
+	 *  - Error: Something went wrong, there is no way to see what went wrong.
+	 *  - Job_Done_Or_Does_Not_Exist: the job is done or doesn't exists (anymore).
 	 *
-	 * @return	int				The JobID, see getJobStatus.
-	 * @param	string $email	The email of the member to unjoin.
+	 * @return	string		The status of the job.
+	 * @param	string $id	The job ID.
 	 */
-	public function unjoinByEmail($email)
+	public function getMemberJobStatus($id)
+	{
+		// possible responses
+		$possibleResponses = array('Insert', 'Processing', 'Processed', 'Error', 'Job_Done_Or_Does_Not_Exist');
+
+		// build parameters
+		$parameters = array();
+		$parameters['synchroId'] = (string) $id;
+
+		// make the call
+		$response = $this->doCall('getMemberJobStatus', $parameters);
+
+		// validate respone
+		if(!isset($response->status)) throw new CampaignCommanderMemberException('Invalid response');
+		if(!in_array($response->status, $possibleResponses)) throw new CampaignCommanderMemberException('Invalid response');
+
+		// return status
+		return (string) $response->status;
+	}
+
+
+	/**
+	 * Unsubscribes one or more members who match a given email address.
+	 *
+	 * @return	string			The job ID of the unjoin, see getJobStatus().
+	 * @param	string $email	The email address.
+	 */
+	public function unjoinMemberByEmail($email)
 	{
 		// build parameters
+		$parameters = array();
 		$parameters['email'] = (string) $email;
 
 		// make the call
 		$response = $this->doCall('unjoinMemberByEmail', $parameters);
 
 		// validate
-		if($response == 0) return false;
+		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
 
 		// return the job ID
-		return $response;
+		return (string) $response;
 	}
 
 
 	/**
-	 * Unjoins a member by id
+	 * Unsubscribes a member who matches a given ID.
 	 *
-	 * @return	int		The JobID, see getJobStatus.
-	 * @param	int $id	The member ID to unjoin.
+	 * @return	string		The job ID of the unjoin, see getJobStatus().
+	 * @param	int $id		The ID of the member.
 	 */
-	public function unjoinById($id)
+	public function unjoinMemberById($id)
 	{
 		// build parameters
+		$parameters = array();
 		$parameters['memberId'] = (string) $id;
 
 		// make the call
 		$response = $this->doCall('unjoinMemberById', $parameters);
 
 		// validate
-		if($response == 0) return false;
+		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
 
 		// return the job ID
-		return $response;
+		return (string) $response;
 	}
 
 
 	/**
-	 * Unjoins a member by object
+	 * Unsubscribes a member by object.
 	 *
-	 * @return	int				The JobID, see getJobStatus.
-	 * @param	array $fields	All members that meet the fields will be unjoined.
+	 * @return	string			The job ID of the unjoin, see getJobStatus().
+	 * @param	array $member	The member.
 	 */
-	public function unjoinByObject($fields)
+	public function unjoinMemberByObj(array $member)
 	{
-		// build member-object
-		$parameters['member'] = array();
-
-		// add fields
-		foreach($fields as $key => $value)
-		{
-			$parameters['member']['dynContent']['entry'][] = array('key' => $key, 'value' => $value);
-		}
+		// build parameters
+		$parameters = array();
+		$parameters['member'] = $member;
 
 		// make the call
 		$response = $this->doCall('unjoinMemberByObj', $parameters);
@@ -833,7 +945,55 @@ class CampaignCommanderMember
 		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
 
 		// return the job ID
-		return $response;
+		return (string) $response;
+	}
+
+
+	/**
+	 * Re-subscribes an unsubscribed member using his/her email address. If there are multiple members with the same email address, they will all be re-subscribed.
+	 * REMARK: The number of rejoins per day is limited to avoid massive rejoins and illegal usage of this method.
+	 *
+	 * @return	string			The job ID of the rejoin, see getJobStatus().
+	 * @param	string $email	The email address of the member.
+	 */
+	public function rejoinMemberByEmail($email)
+	{
+		// build parameters
+		$parameters = array();
+		$parameters['email'] = (string) $email;
+
+		// make the call
+		$response = $this->doCall('rejoinMemberByEmail', $parameters);
+
+		// validate
+		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
+
+		// return the job ID
+		return (string) $response;
+	}
+
+
+	/**
+	 * Re-subscribes an unsibscribed member using his/her ID.
+	 * REMARK: The number of rejoins per day is limited to avoid massive rejoins and illegal usage of this method.
+	 *
+	 * @return	string			The job ID of the rejoin, see getJobStatus().
+	 * @param	string $id	The ID of the member.
+	 */
+	public function rejoinMemberById($id)
+	{
+		// build parameters
+		$parameters = array();
+		$parameters['memberId'] = (string) $id;
+
+		// make the call
+		$response = $this->doCall('rejoinMemberById', $parameters);
+
+		// validate
+		if($response == 0) throw new CampaignCommanderMemberException('Invalid response');
+
+		// return the job ID
+		return (string) $response;
 	}
 }
 
