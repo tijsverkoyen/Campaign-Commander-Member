@@ -88,7 +88,7 @@ class CampaignCommanderMemberTest extends PHPUnit_Framework_TestCase
 	 */
 	public function testGetMemberById()
 	{
-		$var = $this->campaignCommanderMember->getMemberById('1043875306833');
+		$var = $this->campaignCommanderMember->getMemberById('1048473894275');
 
 		$this->assertArrayHasKey('EMVDOUBLON', $var);
 		$this->assertArrayHasKey('EMAIL', $var);
@@ -178,7 +178,8 @@ class CampaignCommanderMemberTest extends PHPUnit_Framework_TestCase
 	 */
 	public function testUnjoinMemberById()
 	{
-		$this->assertType('string', $this->campaignCommanderMember->unjoinMemberById('1045452342012'));
+		$this->assertType('string', $this->campaignCommanderMember->unjoinMemberById('1048473894275'));
+		$this->assertType('string', $this->campaignCommanderMember->rejoinMemberById('1048473894275'));
 	}
 
 
@@ -188,24 +189,7 @@ class CampaignCommanderMemberTest extends PHPUnit_Framework_TestCase
 	public function testUnjoinMemberByObj()
 	{
 		$this->assertType('string', $this->campaignCommanderMember->unjoinMemberByObj(array('dynContent' => array(), 'memberUID' => 'email:spam@verkoyen.eu')));
-	}
-
-
-	/**
-	 * Tests CampaignCommanderMember->rejoinMemberByEmail()
-	 */
-	public function testRejoinMemberByEmail()
-	{
 		$this->assertType('string', $this->campaignCommanderMember->rejoinMemberByEmail('spam@verkoyen.eu'));
-	}
-
-
-	/**
-	 * Tests CampaignCommanderMember->rejoinMemberById()
-	 */
-	public function testRejoinMemberById()
-	{
-		$this->assertType('string', $this->campaignCommanderMember->rejoinMemberById('1045452342012'));
 	}
 }
 

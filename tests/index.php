@@ -8,7 +8,7 @@ require_once '../campaign_commander_member.php';
 $ccm = new CampaignCommanderMember(LOGIN, PASSWORD, KEY);
 
 //$response = $ccm->descMemberTable();
-//$response = $ccm->getMemberByEmail('specialchars@verkoyen.eu');
+//$response = $ccm->getMemberByEmail('spam@verkoyen.eu');
 //$response = $ccm->getMemberById('1043875306833');
 //$response = $ccm->getListMembersByObj(array(
 //	'dynContent' => array(),
