@@ -8,6 +8,9 @@
  * The class is documented in the file itself. If you find any bugs help me out and report them. Reporting can be done by sending an email to php-campaign-commander-member-bugs[at]verkoyen[dot]eu.
  * If you report a bug, make sure you give me enough information (include your code).
  *
+ * Changelog since 1.1.0
+ * - Better handling for errormessages.
+ *
  * Changelog since 1.0.2
  * - Added method to set the server.
  * - Renamed methods to reflect to current API
@@ -32,7 +35,7 @@
  * This software is provided by the author "as is" and any express or implied warranties, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose are disclaimed. In no event shall the author be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited to, procurement of substitute goods or services; loss of use, data, or profits; or business interruption) however caused and on any theory of liability, whether in contract, strict liability, or tort (including negligence or otherwise) arising in any way out of the use of this software, even if advised of the possibility of such damage.
  *
  * @author			Tijs Verkoyen <php-campaign-commander-member@verkoyen.eu>
- * @version			1.1.0
+ * @version			1.1.1
  *
  * @copyright		Copyright (c), Tijs Verkoyen. All rights reserved.
  * @license			BSD License
@@ -46,7 +49,7 @@ class CampaignCommanderMember
 	const WSDL_URL = 'apimember/services/MemberService?wsdl';
 
 	// current version
-	const VERSION = '1.1.0';
+	const VERSION = '1.1.1';
 
 
 	/**
@@ -198,11 +201,10 @@ class CampaignCommanderMember
 			// validate
 			if(is_soap_fault($response))
 			{
-				// init var
-				$message = 'Internal Error';
-
 				// more detailed message available
+				$message = $response->getMessage();
 				if(isset($response->detail->ConnectionServiceException->description)) $message = (string) $response->detail->ConnectionServiceException->description;
+				if(isset($response->detail->MemberServiceException->description)) $message = (string) $response->detail->MemberServiceException->description . ' ' . $response->detail->MemberServiceException->fields . ' ' . $response->detail->MemberServiceException->status;
 
 				// invalid token?
 				if($message == 'Please enter a valid token to validate your connection.')
@@ -276,10 +278,8 @@ class CampaignCommanderMember
 		// validate response
 		if(is_soap_fault($response))
 		{
-			// init var
-			$message = 'Internal Error';
-
 			// more detailed message available
+			$message = $response->getMessage();
 			if(isset($response->detail->ConnectionServiceException->description)) $message = (string) $response->detail->ConnectionServiceException->description;
 			if(isset($response->detail->MemberServiceException->description)) $message = (string) $response->detail->MemberServiceException->description;
 			if(isset($response->detail->CcmdServiceException->description))
@@ -795,7 +795,7 @@ class CampaignCommanderMember
 		}
 
 		// memberUID
-		if($email !== null) $parameters['member']['email'] = (string) $email;
+		if($email !== null) $parameters['member']['memberUID'] = 'email:' . (string) $email;
 		if($id !== null) $parameters['member']['memberUID'] = (string) $id;
 
 		// make the call
@@ -833,7 +833,7 @@ class CampaignCommanderMember
 		}
 
 		// memberUID
-		if($email !== null) $parameters['member']['email'] = (string) $email;
+		if($email !== null) $parameters['member']['memberUID'] = 'email:' . (string) $email;
 		if($id !== null) $parameters['member']['memberUID'] = (string) $id;
 
 		// make the call
