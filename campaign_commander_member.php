@@ -8,6 +8,9 @@
  * The class is documented in the file itself. If you find any bugs help me out and report them. Reporting can be done by sending an email to php-campaign-commander-member-bugs[at]verkoyen[dot]eu.
  * If you report a bug, make sure you give me enough information (include your code).
  *
+ * Changelog since 1.1.1
+ * - Applied new coding standards.
+ *
  * Changelog since 1.1.0
  * - Better handling for errormessages.
  *
@@ -34,11 +37,10 @@
  *
  * This software is provided by the author "as is" and any express or implied warranties, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose are disclaimed. In no event shall the author be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited to, procurement of substitute goods or services; loss of use, data, or profits; or business interruption) however caused and on any theory of liability, whether in contract, strict liability, or tort (including negligence or otherwise) arising in any way out of the use of this software, even if advised of the possibility of such damage.
  *
- * @author			Tijs Verkoyen <php-campaign-commander-member@verkoyen.eu>
- * @version			1.1.1
- *
- * @copyright		Copyright (c), Tijs Verkoyen. All rights reserved.
- * @license			BSD License
+ * @author Tijs Verkoyen <php-campaign-commander-member@verkoyen.eu>
+ * @version 1.1.2
+ * @copyright Copyright (c), Tijs Verkoyen. All rights reserved.
+ * @license BSD License
  */
 class CampaignCommanderMember
 {
@@ -49,82 +51,72 @@ class CampaignCommanderMember
 	const WSDL_URL = 'apimember/services/MemberService?wsdl';
 
 	// current version
-	const VERSION = '1.1.1';
-
+	const VERSION = '1.1.2';
 
 	/**
 	 * The API-key that will be used for authenticating
 	 *
-	 * @var	string
+	 * @var string
 	 */
 	private $key;
-
 
 	/**
 	 * The login that will be used for authenticating
 	 *
-	 * @var	string
+	 * @var string
 	 */
 	private $login;
-
 
 	/**
 	 * The password that will be used for authenticating
 	 *
-	 * @var	string
+	 * @var string
 	 */
 	private $password;
-
 
 	/**
 	 * The server to use
 	 *
-	 * @var	string
+	 * @var string
 	 */
 	private $server = 'http://emvapi.emv3.com';
-
 
 	/**
 	 * The SOAP-client
 	 *
-	 * @var	SoapClient
+	 * @var SoapClient
 	 */
-	private $soapClient;
-
+	protected $soapClient;
 
 	/**
 	 * The token
 	 *
-	 * @var	string
+	 * @var string
 	 */
 	private $token = null;
-
 
 	/**
 	 * The timeout
 	 *
-	 * @var	int
+	 * @var int
 	 */
 	private $timeOut = 60;
-
 
 	/**
 	 * The user agent
 	 *
-	 * @var	string
+	 * @var string
 	 */
 	private $userAgent;
 
-
-// class methods
+	// class methods
 	/**
 	 * Default constructor
 	 *
-	 * @return	void
-	 * @param	string $login				Login provided for API access.
-	 * @param	string $password			The password.
-	 * @param	string $key					Manager Key copied from the CCMD web application.
-	 * @param	string[optional] $server	The server to use. Ask your account-manager.
+	 * @param string $login					The login needed for API access.
+	 * @param string $password				The login needed password.
+	 * @param string $key					API-Key, can be copied from the CCMD web application.
+	 * @param string[optional] $server		The server to use. Ask your account-manager.
 	 */
 	public function __construct($login, $password, $key, $server = null)
 	{
@@ -134,11 +126,8 @@ class CampaignCommanderMember
 		if($server !== null) $this->setServer($server);
 	}
 
-
 	/**
 	 * Destructor
-	 *
-	 * @return	void
 	 */
 	public function __destruct()
 	{
@@ -163,29 +152,21 @@ class CampaignCommanderMember
 		}
 	}
 
-
 	/**
 	 * Make the call
 	 *
-	 * @return	mixed
-	 * @param	string $method					The method to be called.
-	 * @param	array[optional] $parameters		The parameters.
+	 * @return mixed
+	 * @param string $method				The method to be called.
+	 * @param array[optional] $parameters	The parameters.
 	 */
-	private function doCall($method, array $parameters = array())
+	protected function doCall($method, array $parameters = array())
 	{
 		// open connection if needed
 		if($this->soapClient === null || $this->token === null)
 		{
 			// build options
-			$options = array('soap_version' => SOAP_1_1,
-							 'trace' => self::DEBUG,
-							 'exceptions' => true,
-							 'connection_timeout' => $this->getTimeOut(),
-							 'user_agent' => $this->getUserAgent(),
-							 'typemap' => array(
-												array('type_ns' => 'http://www.w3.org/2001/XMLSchema', 'type_name' => 'long', 'to_xml' => array(__CLASS__, 'toLongXML'), 'from_xml' => array(__CLASS__, 'fromLongXML'))	// map long to string, because a long can cause an integer overflow
-											)
-						);
+			$options = array('soap_version' => SOAP_1_1, 'trace' => self::DEBUG, 'exceptions' => true, 'connection_timeout' => $this->getTimeOut(), 'user_agent' => $this->getUserAgent(), 'typemap' => array(array('type_ns' => 'http://www.w3.org/2001/XMLSchema', 'type_name' => 'long', 'to_xml' => array(__CLASS__, 'toLongXML'), 'from_xml' => array(__CLASS__, 'fromLongXML')))			// map long to string, because a long can cause an integer overflow
+			);
 
 			// create client
 			$this->soapClient = new SoapClient($this->getServer() . '/' . self::WSDL_URL, $options);
@@ -309,177 +290,156 @@ class CampaignCommanderMember
 		return $response->return;
 	}
 
-
 	/**
 	 * Convert a long into a string
 	 *
-	 * @return	string
-	 * @param	string $value	The value to convert.
+	 * @return string
+	 * @param string $value	The value to convert.
 	 */
 	public static function fromLongXML($value)
 	{
 		return (string) strip_tags($value);
 	}
 
-
 	/**
-	 * Convert a x into a long
+	 * Convert a variable into a long
 	 *
-	 * @return	string
-	 * @param	string $value	The value to convert.
+	 * @return string
+	 * @param string $value	The value to convert.
 	 */
 	public static function toLongXML($value)
 	{
 		return '<long>' . $value . '</long>';
 	}
 
-
 	/**
 	 * Get the key
 	 *
-	 * @return	string
+	 * @return string
 	 */
 	private function getKey()
 	{
 		return (string) $this->key;
 	}
 
-
 	/**
 	 * Get the login
 	 *
-	 * @return	string
+	 * @return string
 	 */
 	private function getLogin()
 	{
 		return (string) $this->login;
 	}
 
-
 	/**
 	 * Get the password
 	 *
-	 * @return	string
+	 * @return string
 	 */
 	private function getPassword()
 	{
 		return $this->password;
 	}
 
-
 	/**
 	 * Get the server
 	 *
-	 * @return	string
+	 * @return string
 	 */
 	private function getServer()
 	{
 		return $this->server;
 	}
 
-
 	/**
 	 * Get the timeout that will be used
 	 *
-	 * @return	int
+	 * @return int
 	 */
 	public function getTimeOut()
 	{
 		return (int) $this->timeOut;
 	}
 
-
 	/**
 	 * Get the useragent that will be used. Our version will be prepended to yours.
 	 * It will look like: "PHP Campaign Commander Member/<version> <your-user-agent>"
 	 *
-	 * @return	string
+	 * @return string
 	 */
 	public function getUserAgent()
 	{
 		return (string) 'PHP Campaign Commander Member/' . self::VERSION . ' ' . $this->userAgent;
 	}
 
-
 	/**
 	 * Set the Key that has to be used
 	 *
-	 * @return	void
-	 * @param	string $key		The key to set.
+	 * @param string $key
 	 */
 	private function setKey($key)
 	{
 		$this->key = (string) $key;
 	}
 
-
 	/**
 	 * Set the login that has to be used
 	 *
-	 * @return	void
-	 * @param	string $login	The login to use.
+	 * @param string $login
 	 */
 	private function setLogin($login)
 	{
 		$this->login = (string) $login;
 	}
 
-
 	/**
 	 * Set the password that has to be used
 	 *
-	 * @return	void
-	 * @param	string $password	The password to use.
+	 * @param string $password
 	 */
 	private function setPassword($password)
 	{
 		$this->password = (string) $password;
 	}
 
-
 	/**
 	 * Set the server that has to be used.
 	 *
-	 * @return	void
-	 * @param	string $server	The server to use.
+	 * @param string $server
 	 */
 	private function setServer($server)
 	{
 		$this->server = (string) $server;
 	}
 
-
 	/**
 	 * Set the timeout
 	 * After this time the request will stop. You should handle any errors triggered by this.
 	 *
-	 * @return	void
-	 * @param	int $seconds	The timeout in seconds.
+	 * @param int $seconds
 	 */
 	public function setTimeOut($seconds)
 	{
 		$this->timeOut = (int) $seconds;
 	}
 
-
 	/**
 	 * Set the user-agent for you application
 	 * It will be appended to ours, the result will look like: "PHP Campaign Commander Member/<version> <your-user-agent>"
 	 *
-	 * @return	void
-	 * @param	string $userAgent	Your user-agent, it should look like <app-name>/<app-version>.
+	 * @param string $userAgent	The user-agent, it should look like <app-name>/<app-version>.
 	 */
 	public function setUserAgent($userAgent)
 	{
 		$this->userAgent = (string) $userAgent;
 	}
 
-
-// connection methods
+	// connection methods
 	/**
 	 * Close the connection
 	 *
-	 * @return	bool	true if the connection was closes, otherwise false.
+	 * @return bool if the connection was closes, otherwise false.
 	 */
 	public function closeApiConnection()
 	{
@@ -500,12 +460,12 @@ class CampaignCommanderMember
 		return false;
 	}
 
-
-// member methods
+	// member methods
 	/**
-	 * Retrieves the list of fields (i.e. database column names) available in the Member table.
+	 * Retrieves the list of fields (i.e.
+	 * database column names) available in the Member table.
 	 *
-	 * @return	array	An array containing all database column names.
+	 * @return array	An array containing all the fields in your member-table
 	 */
 	public function descMemberTable()
 	{
@@ -519,18 +479,18 @@ class CampaignCommanderMember
 		$fields = array();
 
 		// loop fields
-		foreach($response->fields as $row) $fields[] = array('name' => $row->name, 'type' => strtolower($row->type));
+		foreach($response->fields as $row)
+			$fields[] = array('name' => $row->name, 'type' => strtolower($row->type));
 
-		// return
+			// return
 		return $fields;
 	}
-
 
 	/**
 	 * Get a member by email-address
 	 *
-	 * @return	array			An array with all fields as a key-value-pair for the member.
-	 * @param	string $email	The email address of the member to retrieve.
+	 * @return array 			An array with all fields as a key-value-pair for the member.
+	 * @param string $email		The email address of the member to retrieve.
 	 */
 	public function getMemberByEmail($email)
 	{
@@ -568,12 +528,11 @@ class CampaignCommanderMember
 		return $return;
 	}
 
-
 	/**
 	 * Uses the member ID to retrieve the details of a member.
 	 *
-	 * @return	array		An array with all fields as a key-value-pair for the member.
-	 * @param	string $id	The ID of the member whose details you want to retrieve..
+	 * @return array 		An array with all fields as a key-value-pair for the member.
+	 * @param string $id	The ID of the member whose details you want to retrieve..
 	 */
 	public function getMemberById($id)
 	{
@@ -608,12 +567,11 @@ class CampaignCommanderMember
 		return $return;
 	}
 
-
 	/**
 	 * Retrieves a list of a maximum of 50 members who match the given criteria.
 	 *
-	 * @return	array			An array containing the list of members who match the criteria.
-	 * @param	array $member	The member object containing the criteria.
+	 * @return array			An array containing the list of members who match the criteria.
+	 * @param array $member		A member object containing the criteria.
 	 */
 	public function getListMembersByObj(array $member)
 	{
@@ -664,12 +622,12 @@ class CampaignCommanderMember
 		return $return;
 	}
 
-
 	/**
-	 * Retrieves all members page by page. Each page contains 10 members.
+	 * Retrieves all members page by page.
+	 * Each page contains 10 members.
 	 *
-	 * @return	array		An array containing the list of members.
-	 * @param	int $page	The page number to retrieve.
+	 * @return array		An array containing the list of members.
+	 * @param int $page		The page number to retrieve.
 	 */
 	public function getListMembersByPage($page)
 	{
@@ -720,12 +678,11 @@ class CampaignCommanderMember
 		return $return;
 	}
 
-
 	/**
 	 * Insert a new member, all member-fields will be empty
 	 *
-	 * @return	string			The job ID of the insertion, see getJobStatus().
-	 * @param	string $email	The email addres of the new member.
+	 * @return string			The job ID of the insertion, see getJobStatus().
+	 * @param string $email		The email addres of the new member.
 	 */
 	public function insertMember($email)
 	{
@@ -743,14 +700,13 @@ class CampaignCommanderMember
 		return (string) $response;
 	}
 
-
 	/**
 	 * Updates a given field for a certain user
 	 *
-	 * @return	string			The job ID of the update, see getJobStatus().
-	 * @param	string $email	The email address of the member.
-	 * @param	string $field	The field to update.
-	 * @param	mixed $value	The value with which to update the field.
+	 * @return string 			The job ID of the update, see getJobStatus().
+	 * @param string $email		The email address of the member.
+	 * @param string $field		The field to update.
+	 * @param mixec $value		The value with which to update the field.
 	 */
 	public function updateMember($email, $field, $value)
 	{
@@ -770,14 +726,13 @@ class CampaignCommanderMember
 		return (string) $response;
 	}
 
-
 	/**
 	 * Insert a new member of updates an existing member
 	 *
-	 * @return	string						The job ID of the update/insertion, see getJobStatus().
-	 * @param	array $fields				The fields, as a key-value-pair, that will be updates/inserted.
-	 * @param	string[optional] $email		The email of the member to update/insert.
-	 * @param	string[optional] $id		The id of the member to update/insert.
+	 * @return string					The job ID of the update/insertion, see getJobStatus().
+	 * @param array $fields				The fields, as a key-value-pair, that will be updates/inserted.
+	 * @param string[optional] $email	The email of the member to update/insert.
+	 * @param string[optional] $id		The id of the member to update/insert.
 	 */
 	public function insertOrUpdateMemberByObj($fields, $email = null, $id = null)
 	{
@@ -808,14 +763,13 @@ class CampaignCommanderMember
 		return (string) $response;
 	}
 
-
 	/**
 	 * Update a member by building a member-object
 	 *
-	 * @return	string						The job ID of the update, see getJobStatus().
-	 * @param	array $fields				The fields, as a key-value-pair, that will be set.
-	 * @param	string[optional] $email		The email of the member to update.
-	 * @param	string[optional] $id		The id of the member to update.
+	 * @return string					The job ID of the update/insertion, see getJobStatus().
+	 * @param array $fields				The fields, as a key-value-pair, that will be updates/inserted.
+	 * @param string[optional] $email	The email of the member to update/insert.
+	 * @param string[optional] $id		The id of the member to update/insert.
 	 */
 	public function updateMemberByObj($fields, $email = null, $id = null)
 	{
@@ -846,18 +800,17 @@ class CampaignCommanderMember
 		return (string) $response;
 	}
 
-
 	/**
 	 * Retrieves the job status (i.e. the status of the member insertion or update) using the job ID.
 	 * Possible return-values are:
-	 *  - Insert: The jobs is busy (I think)
-	 *  - Processing: The job is busy
-	 *  - Processed: The job was processed and is done
-	 *  - Error: Something went wrong, there is no way to see what went wrong.
-	 *  - Job_Done_Or_Does_Not_Exist: the job is done or doesn't exists (anymore).
+	 * - Insert: The jobs is busy (I think)
+	 * - Processing: The job is busy
+	 * - Processed: The job was processed and is done
+	 * - Error: Something went wrong, there is no way to see what went wrong.
+	 * - Job_Done_Or_Does_Not_Exist: the job is done or doesn't exists (anymore).
 	 *
-	 * @return	string		The status of the job.
-	 * @param	string $id	The job ID.
+	 * @return string		The status of the job.
+	 * @param string $id	The job ID.
 	 */
 	public function getMemberJobStatus($id)
 	{
@@ -879,12 +832,11 @@ class CampaignCommanderMember
 		return (string) $response->status;
 	}
 
-
 	/**
 	 * Unsubscribes one or more members who match a given email address.
 	 *
-	 * @return	string			The job ID of the unjoin, see getJobStatus().
-	 * @param	string $email	The email address.
+	 * @return string			The job ID of the unjoin, see getJobStatus().
+	 * @param string $email		The email address.
 	 */
 	public function unjoinMemberByEmail($email)
 	{
@@ -902,12 +854,11 @@ class CampaignCommanderMember
 		return (string) $response;
 	}
 
-
 	/**
 	 * Unsubscribes a member who matches a given ID.
 	 *
-	 * @return	string		The job ID of the unjoin, see getJobStatus().
-	 * @param	int $id		The ID of the member.
+	 * @return string 		The job ID of the unjoin, see getJobStatus().
+	 * @param string $id 	The ID of the member.
 	 */
 	public function unjoinMemberById($id)
 	{
@@ -925,12 +876,11 @@ class CampaignCommanderMember
 		return (string) $response;
 	}
 
-
 	/**
 	 * Unsubscribes a member by object.
 	 *
-	 * @return	string			The job ID of the unjoin, see getJobStatus().
-	 * @param	array $member	The member.
+	 * @return string 		The job ID of the unjoin, see getJobStatus().
+	 * @param array $member	The member.
 	 */
 	public function unjoinMemberByObj(array $member)
 	{
@@ -948,13 +898,13 @@ class CampaignCommanderMember
 		return (string) $response;
 	}
 
-
 	/**
-	 * Re-subscribes an unsubscribed member using his/her email address. If there are multiple members with the same email address, they will all be re-subscribed.
+	 * Re-subscribes an unsubscribed member using his/her email address.
+	 * If there are multiple members with the same email address, they will all be re-subscribed.
 	 * REMARK: The number of rejoins per day is limited to avoid massive rejoins and illegal usage of this method.
 	 *
-	 * @return	string			The job ID of the rejoin, see getJobStatus().
-	 * @param	string $email	The email address of the member.
+	 * @return string 		The job ID of the unjoin, see getJobStatus().
+	 * @param string $email	The email address of the member.
 	 */
 	public function rejoinMemberByEmail($email)
 	{
@@ -972,13 +922,12 @@ class CampaignCommanderMember
 		return (string) $response;
 	}
 
-
 	/**
 	 * Re-subscribes an unsibscribed member using his/her ID.
 	 * REMARK: The number of rejoins per day is limited to avoid massive rejoins and illegal usage of this method.
 	 *
-	 * @return	string			The job ID of the rejoin, see getJobStatus().
-	 * @param	string $id	The ID of the member.
+	 * @return string 		The job ID of the unjoin, see getJobStatus().
+	 * @param string $id 	The ID of the member.
 	 */
 	public function rejoinMemberById($id)
 	{
@@ -997,14 +946,10 @@ class CampaignCommanderMember
 	}
 }
 
-
 /**
  * Campaign Commander Exception class
  *
- * @author	Tijs Verkoyen <php-campaign-commander-member@verkoyen.eu>
+ * @author Tijs Verkoyen <php-campaign-commander-member@verkoyen.eu>
  */
 class CampaignCommanderMemberException extends Exception
-{
-}
-
-?>
+{}
