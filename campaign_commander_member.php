@@ -8,6 +8,9 @@
  * The class is documented in the file itself. If you find any bugs help me out and report them. Reporting can be done by sending an email to php-campaign-commander-member-bugs[at]verkoyen[dot]eu.
  * If you report a bug, make sure you give me enough information (include your code).
  *
+ * Changelog since 1.1.2
+ * - made the setServer-method public
+ *
  * Changelog since 1.1.1
  * - Applied new coding standards.
  *
@@ -408,7 +411,7 @@ class CampaignCommanderMember
 	 *
 	 * @param string $server
 	 */
-	private function setServer($server)
+	public function setServer($server)
 	{
 		$this->server = (string) $server;
 	}
